@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { Component, useEffect, useState } from 'react';
 import { fetchImages } from 'api/fetchImages';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -8,37 +8,42 @@ import { MyModal } from './Modal/Modal';
 import toast, { Toaster } from 'react-hot-toast';
 import { GlobalStyle } from './GlobalStyle';
 import { animateScroll as scroll } from 'react-scroll';
+import { generateRandomIndex } from './RanomIndex/RandomIndex';
 
-export class App extends Component {
-  state = {
-    dataImages: [],
-    searchQuery: '',
-    page: 1,
-    per_page: 12,
-    isLoading: false,
-    error: false,
-    showModal: false,
-    largeImageURL: '',
-    tagImageAlt: '',
-    availablePages: 0,
-  };
+export const App = () => {
+  const [dataImages, setDataImages] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [per_page] = useState(12);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [tagImageAlt, setTagImageAlt] = useState('');
+  const [availablePages, setAvailablePages] = useState(0);
+  const [randomIndex, setRandomIndex] = useState();
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, page, per_page } = this.state;
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!searchQuery) return;
 
-    if (prevState.searchQuery !== searchQuery || prevState.page !== page) {
-      const clearName = searchQuery.split('/')[1];
       try {
-        this.setState({ isLoading: true, error: false });
+        setIsLoading(true);
+        setError(false);
+
+        const clearName = searchQuery.split('/')[1];
         const initialImages = await fetchImages(clearName, page);
         const { hits, totalHits } = initialImages;
 
         if (hits.length > 0) {
-          this.setState(prevState => ({
-            dataImages: [...prevState.dataImages, ...hits],
-            availablePages: Math.ceil(totalHits / per_page),
-          }));
-
+          setDataImages(prevDataImages => [
+            ...prevDataImages,
+            ...hits.filter(
+              newImage =>
+                !prevDataImages.some(prevImage => prevImage.id === newImage.id)
+            ),
+          ]);
+          setAvailablePages(Math.ceil(totalHits / per_page));
           toast.success('Successfully found!');
         } else {
           toast.error(
@@ -46,96 +51,65 @@ export class App extends Component {
           );
         }
       } catch (error) {
-        this.setState({ error });
+        setError(error);
       } finally {
-        this.setState({ isLoading: false });
+        setIsLoading(false);
       }
-    }
-  }
+    };
 
-  handleFormSubmit = newQuery => {
-    this.setState({
-      searchQuery: `${Date.now()}/${newQuery}`,
-      page: 1,
-      dataImages: [],
-    });
+    fetchData();
+  }, [searchQuery, page, per_page]);
+
+  const handleFormSubmit = newQuery => {
+    setSearchQuery(newQuery);
+    setPage(1);
+    setDataImages([]);
+    generateRandomIndex();
   };
 
-  handleLoadMore = () => {
-    this.setState(
-      prevState => ({
-        page: prevState.page + 1,
-      }),
-      () => {
-        scroll.scrollToBottom();
-      }
-    );
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
+    scroll.scrollToBottom();
   };
 
-  handleOpenModal = image => {
+  const handleOpenModal = image => {
     const { largeImageURL, tags } = image;
-    this.setState({
-      showModal: true,
-      largeImageURL,
-      tagImageAlt: tags,
-    });
+    setShowModal(true);
+    setLargeImageURL(largeImageURL);
+    setTagImageAlt(tags);
   };
 
-  handleCloseModal = () => {
-    this.setState({
-      showModal: false,
-      largeImageURL: '',
-      tagImageAlt: '',
-    });
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setLargeImageURL('');
+    setTagImageAlt('');
   };
 
-  render() {
-    const {
-      page,
-      availablePages,
-      dataImages,
-      showModal,
-      largeImageURL,
-      tagImageAlt,
-      isLoading,
-      error,
-    } = this.state;
+  return (
+    <div>
+      <Searchbar onFormSubmit={handleFormSubmit} />
 
-    return (
-      <div>
-        <Searchbar onFormSubmit={this.handleFormSubmit} />
+      {isLoading && <Loader />}
 
-        {isLoading && <Loader />}
+      {error && <h1>{error.message}</h1>}
 
-        {error && <h1>{error.message}</h1>}
+      {!isLoading && !error && (
+        <>
+          <ImageGallery dataImages={dataImages} onOpenModal={handleOpenModal} />
 
-        {!isLoading && !error && (
-          <>
-            <ImageGallery
-              dataImages={dataImages}
-              onOpenModal={this.handleOpenModal}
-            />
+          {page !== availablePages && dataImages.length >= 11 && (
+            <LoadMoreBtn onLoadMore={handleLoadMore} />
+          )}
+        </>
+      )}
 
-            {error && (
-              <b>
-                Oops! Something went wrong! Please try reloading this page! 🥹
-              </b>
-            )}
-
-            {page !== availablePages && dataImages.length >= 11 && (
-              <LoadMoreBtn onLoadMore={this.handleLoadMore} />
-            )}
-          </>
-        )}
-
-        {showModal && (
-          <MyModal onCloseModal={this.handleCloseModal}>
-            <img src={largeImageURL} alt={tagImageAlt} />
-          </MyModal>
-        )}
-        <GlobalStyle />
-        <Toaster />
-      </div>
-    );
-  }
-}
+      {showModal && (
+        <MyModal onCloseModal={handleCloseModal}>
+          <img src={largeImageURL} alt={tagImageAlt} />
+        </MyModal>
+      )}
+      <GlobalStyle />
+      <Toaster />
+    </div>
+  );
+};

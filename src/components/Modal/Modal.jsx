@@ -1,32 +1,30 @@
-import { Component } from 'react';
+import { useEffect } from 'react';
 import { BackdropStyled, ModalStyled } from './Modal.styled';
 
-export class MyModal extends Component {
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDown);
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
-
-  handleKeyDown = event => {
+export const MyModal = ({ onCloseModal, children }) => {
+  const handleKeyDown = event => {
     if (event.code === 'Escape') {
-      this.props.onCloseModal();
+      onCloseModal();
     }
   };
 
-  handleOverlayClick = event => {
+  const handleOverlayClick = event => {
     if (event.currentTarget === event.target) {
-      this.props.onCloseModal();
+      onCloseModal();
     }
   };
 
-  render() {
-    return (
-      <BackdropStyled onClick={this.handleOverlayClick}>
-        <ModalStyled>{this.props.children}</ModalStyled>
-      </BackdropStyled>
-    );
-  }
-}
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onCloseModal]);
+
+  return (
+    <BackdropStyled onClick={handleOverlayClick}>
+      <ModalStyled>{children}</ModalStyled>
+    </BackdropStyled>
+  );
+};
