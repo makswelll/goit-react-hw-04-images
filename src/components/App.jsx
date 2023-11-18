@@ -8,7 +8,6 @@ import { MyModal } from './Modal/Modal';
 import toast, { Toaster } from 'react-hot-toast';
 import { GlobalStyle } from './GlobalStyle';
 import { animateScroll as scroll } from 'react-scroll';
-import { generateRandomIndex } from './RanomIndex/RandomIndex';
 
 export const App = () => {
   const [dataImages, setDataImages] = useState([]);
@@ -21,7 +20,6 @@ export const App = () => {
   const [largeImageURL, setLargeImageURL] = useState('');
   const [tagImageAlt, setTagImageAlt] = useState('');
   const [availablePages, setAvailablePages] = useState(0);
-  const [randomIndex, setRandomIndex] = useState();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,7 +30,7 @@ export const App = () => {
         setError(false);
 
         const clearName = searchQuery.split('/')[1];
-        const initialImages = await fetchImages(clearName, page);
+        const initialImages = await fetchImages(clearName || searchQuery, page);
         const { hits, totalHits } = initialImages;
 
         if (hits.length > 0) {
@@ -64,7 +62,6 @@ export const App = () => {
     setSearchQuery(newQuery);
     setPage(1);
     setDataImages([]);
-    generateRandomIndex();
   };
 
   const handleLoadMore = () => {
@@ -95,7 +92,12 @@ export const App = () => {
 
       {!isLoading && !error && (
         <>
-          <ImageGallery dataImages={dataImages} onOpenModal={handleOpenModal} />
+          {dataImages.length > 0 && (
+            <ImageGallery
+              dataImages={dataImages}
+              onOpenModal={handleOpenModal}
+            />
+          )}
 
           {page !== availablePages && dataImages.length >= 11 && (
             <LoadMoreBtn onLoadMore={handleLoadMore} />
