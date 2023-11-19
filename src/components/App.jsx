@@ -8,6 +8,7 @@ import { MyModal } from './Modal/Modal';
 import toast, { Toaster } from 'react-hot-toast';
 import { GlobalStyle } from './GlobalStyle';
 import { animateScroll as scroll } from 'react-scroll';
+import { nanoid } from 'nanoid';
 
 export const App = () => {
   const [dataImages, setDataImages] = useState([]);
@@ -20,6 +21,7 @@ export const App = () => {
   const [largeImageURL, setLargeImageURL] = useState('');
   const [tagImageAlt, setTagImageAlt] = useState('');
   const [availablePages, setAvailablePages] = useState(0);
+  const [id, setId] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,18 +31,11 @@ export const App = () => {
         setIsLoading(true);
         setError(false);
 
-        const clearName = searchQuery.split('/')[1];
-        const initialImages = await fetchImages(clearName || searchQuery, page);
+        const initialImages = await fetchImages(searchQuery, page);
         const { hits, totalHits } = initialImages;
 
         if (hits.length > 0) {
-          setDataImages(prevDataImages => [
-            ...prevDataImages,
-            ...hits.filter(
-              newImage =>
-                !prevDataImages.some(prevImage => prevImage.id === newImage.id)
-            ),
-          ]);
+          setDataImages(prevDataImages => [...prevDataImages, ...hits]);
           setAvailablePages(Math.ceil(totalHits / per_page));
           toast.success('Successfully found!');
         } else {
@@ -56,12 +51,13 @@ export const App = () => {
     };
 
     fetchData();
-  }, [searchQuery, page, per_page]);
+  }, [searchQuery, page, per_page, id]);
 
   const handleFormSubmit = newQuery => {
     setSearchQuery(newQuery);
     setPage(1);
     setDataImages([]);
+    setId(nanoid());
   };
 
   const handleLoadMore = () => {
@@ -90,14 +86,9 @@ export const App = () => {
 
       {error && <h1>{error.message}</h1>}
 
-      {!isLoading && !error && (
+      {dataImages.length > 0 && (
         <>
-          {dataImages.length > 0 && (
-            <ImageGallery
-              dataImages={dataImages}
-              onOpenModal={handleOpenModal}
-            />
-          )}
+          <ImageGallery dataImages={dataImages} onOpenModal={handleOpenModal} />
 
           {page !== availablePages && dataImages.length >= 11 && (
             <LoadMoreBtn onLoadMore={handleLoadMore} />
