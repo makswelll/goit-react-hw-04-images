@@ -31,8 +31,7 @@ export const App = () => {
         setIsLoading(true);
         setError(false);
 
-        const initialImages = await fetchImages(searchQuery, page);
-        const { hits, totalHits } = initialImages;
+        const { hits, totalHits } = await fetchImages(searchQuery, page);
 
         if (hits.length > 0) {
           setDataImages(prevDataImages => [...prevDataImages, ...hits]);
